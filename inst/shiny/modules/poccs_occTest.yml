@@ -1,0 +1,5 @@
+component: "poccs"
+short_name: "Occurence Tests"
+long_name: "Occurrence Quality Tests"
+authors: "Pep Serra-Diaz, Brian Maitner, Cory Merow"
+package: [occTest]
