@@ -78,7 +78,7 @@ tagList(
             ),
             tags$hr(),
             insert_modules_ui("poccs"),
-            # CM: start comment
+            #CM: start add
             # conditionalPanel("input.poccsSel == 'profOccs'",
             #                  uiTop(profileOccs_INFO),
             #                  actionButton("goProfileOccs", "Profile Occurrences"), br(), br(),
@@ -86,7 +86,7 @@ tagList(
             #                  actionButton("goProfileOccsClean", "Clean Occurrences"),
             #                  uiBottom(profileOccs_INFO)
             # ),
-            # CM: End comment
+            # CM: End add
             tags$hr(),
             tags$strong("Reset to original occurrences"),
             tags$br(),

@@ -363,6 +363,7 @@ function(input, output, session) {
     spp[[curSp()]]$occs <- spp[[curSp()]]$occData$occsCleaned
     spp[[curSp()]]$rmm$code$wallace$occsSelPolyCoords <- NULL
     spp[[curSp()]]$procOccs$occsThin <- NULL
+    spp[[curSp()]]$procOccs$occsPostOccTest <- NULL
     spp[[curSp()]]$rmm$code$wallace$removedIDs <- NULL
     logger %>% writeLog(
       hlSpp(curSp()), "Reset to original occurrences (n =",
