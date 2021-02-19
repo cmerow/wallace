@@ -17,7 +17,7 @@ poccs_occTest_module_ui <- function(id) {
     ),
     tags$div(
       title = "Add Batch guidance text here (**)",
-      checkboxInput(ns("batch2"), label = strong("Batch"), value = FALSE) # Check default (value = FALSE)
+      checkboxInput(ns("batch1"), label = strong("Batch"), value = FALSE) # Check default (value = FALSE)
     ),
     actionButton(ns("goTestOccs"), "Test Occurrences"),
     tags$hr(),
@@ -39,12 +39,12 @@ poccs_occTest_module_ui <- function(id) {
     ),
     #CM: what is the value of this? the list elements?
     radioButtons(ns("occFilterRule"), "Filter Rule:",
-                 choices = list("Strict (passes all tests)",
-                                "Majority (passes half tests)",
-                                "Relaxed (passes any tests")),
+                 choices = list("Strict (passes all tests)"='stringent',
+                                "Majority (passes half tests)"='majority',
+                                "Relaxed (passes any tests"='relaxed')),
     tags$div(
       title = "Add Batch guidance text here (**)",
-      checkboxInput(ns("batch2"), label = strong("Batch"), value = FALSE) # Check default (value = FALSE)
+      checkboxInput(ns("batch1"), label = strong("Batch"), value = FALSE) # Check default (value = FALSE)
     ),
     actionButton(ns("goFilterOccs"), "Filter Occurrences")
   )
@@ -68,15 +68,20 @@ poccs_occTest_module_server <- function(input, output, session, common) {
   #   # METADATA ####
   # })
   observeEvent(input$goTestOccs, {
-    common$update_component(tab = "Map")
-    # ERRORS #### Not needed yet
-    # if (is.null(envs())) {
-    #   logger %>% writeLog(type = 'error', hlSpp(curSp()),
-    #                       'Environmental variables missing.',
-    #                       '. Obtain them in component 3.')
-    #   return()
-    # }
-    req(curSp(), occs())
+    # ERRORS ####
+    if (is.null(envs())) {
+      logger %>% writeLog(type = 'error', hlSpp(curSp()),
+                          'Environmental variables missing.',
+                          '. Obtain them in component 3.')
+      return()
+    }
+    if (is.null(occs())) {
+      logger %>% writeLog(type = 'error', hlSpp(curSp()),
+                          'Occurrences are missing.',
+                          '. Obtain them in component 2.')
+      return()
+    }
+    req(curSp(), occs(), envs())
 
     # loop over all species if batch is on
     if (input$batch1 == TRUE) spLoop <- allSp() else spLoop <- curSp()
@@ -86,25 +91,29 @@ poccs_occTest_module_server <- function(input, output, session, common) {
       # CM: eventually use the settings from input$geoTests, input$envTests, input$humanTests
       occsTested = wallaceOccTest(sp.name=sp, sp.table=spp[[sp]]$occs,
                                   r.env=spp[[sp]]$envs, shinyLogs=logger)
-      req(occsTested) # cm:what does this do?
+      req(occsTested)
 
       # LOAD INTO SPP ####
       spp[[sp]]$occs <- occsTested
 
       # METADATA
       # CM: can change these to settings if user can control them
-      spp[[sp]]$rmm$dataPrep$geographic$geographicStandardization=T
-      # spp[[sp]]$rmm$data$occurrence$backgroundSampleSizeRule <-
-      #   paste0(input$bgSel, ', ', input$bgBuf, ' degree buffer')
+      spp[[sp]]$rmm$dataPrep$geographic$geographicStandardization$rule=T
+      spp[[sp]]$rmm$dataPrep$geographic$geographicOutlierRemoval$rule=T
+      spp[[sp]]$rmm$dataPrep$geographic$centroidRemoval$rule=T
+      spp[[sp]]$rmm$dataPrep$geographic$pointInPolygon$rule=T
+      spp[[sp]]$rmm$dataPrep$biological$duplicateRemoval$rule=T
+      spp[[sp]]$rmm$dataPrep$environmental$environmentalOutlierRemoval$rule=T
 
       ##Creating these to facilitate RMD generation.
       #CM: if we add the optiuon to turn test blocks on/off, then indicate which test blocks were run
-      #spp[[sp]]species$rmm$code$wallace$filterRule='something'
+      spp[[sp]]$species$rmm$code$wallace$occTests=c('env','geo','human')
     }
+    common$update_component(tab = "Table")
   })
 
   observeEvent(input$goFilterOccs, {
-  #   # WARNING #### CM: probably need a warning if someone tries to run this event without running step 1
+  #   # WARNING #### CM: probably need a warning if someone tries to run this event without running step 1. test for col names maybe. goal is to check the object made in step 1.
   #   if (input$bgPtsNum < 1) {
   #     logger %>% writeLog(type = 'warning',
   #                         "Enter a non-zero number of background points.")
@@ -117,32 +126,28 @@ poccs_occTest_module_server <- function(input, output, session, common) {
 
     for (sp in spLoop) {
       # FUNCTION CALL ####
-      #CM: what is the value of this? the list elements?
-
-     if(input$occFilterRule=="Strict (passes all tests)") filterRule='stringent'
-     if(input$occFilterRule=="Majority (passes half tests)") filterRule='majority'
-     if(input$occFilterRule=="Relaxed (passes any tests") filterRule='relaxed'
 
       # CM: eventually use the settings from input$ to set the level
       occsFiltered = wallaceOccTestFilter(df=spp[[sp]]$occs, level=1,
-                                          errorAcceptance=filterRule, shinyLogs=logger)
-      req(occsFiltered) # cm:what does this do?
+                                          errorAcceptance=input$occFilterRule,
+                                          shinyLogs=logger)
+      req(occsFiltered)
 
       # LOAD INTO SPP ####
       spp[[sp]]$procOccs$occsPreOccTest=spp[[sp]]$occs
       spp[[sp]]$procOccs$occsPostOccTest=occsFiltered
-      # CM: check that i duplicate the new occs in order to track all the changes
       spp[[sp]]$occs <- occsFiltered
 
       # METADATA #### CM: i think not needed
       # CM: replace the number of presences samples because i think there isn't a field to report cleaning. (the metadata doesn't care about how you go to this number; that's recorded in dataPrep fields)
       spp[[sp]]$rmm$data$occurrence$presenceSampleSize=nrow(occsFiltered)
+      # todo: should store number of points removed
 
       ##Creating these to facilitate RMD generation.
-      # CM:: whats needed for this?
-      spp[[sp]]$species$rmm$code$wallace$filterRule=filterRule
+      # CM:: whats needed for this? anything in input$
+      spp[[sp]]$species$rmm$code$wallace$filterRule=input$occFilterRule
     }
-    common$update_component(tab = "Map") # CM: needed?
+    common$update_component(tab = "Map")
   })
   #CM: output some aspect of the test table as to results
   # Define output as a table
@@ -155,6 +160,8 @@ poccs_occTest_module_server <- function(input, output, session, common) {
   #CM: not sure what i need to do here. do i need to update the value of occs table?
   return(list(
   #   save = function() {
+    # to do: anything stored with input$
+    # input$filterRule
   #     # Save any values that should be saved when the current session is saved
   #     list(
   #       bgSel = input$bgSel,
@@ -165,13 +172,12 @@ poccs_occTest_module_server <- function(input, output, session, common) {
   #   load = function(state) {
     # CM: I'm not sure where the state variables are defined to know what names i need to give them
   #     # Load
-  #     updateRadioButtons(session, "bgSel", selected = state$bgSel)
-  #     updateNumericInput(session, "bgBuf", value = state$bgBuf)
-  #     updateNumericInput(session, "bgPtsNum", value = state$bgPtsNum)
+        # updateRadioButtons(session, "filterRule", selected=state$filterRule)
+  ##     updateRadioButtons(session, "bgSel", selected = state$bgSel)
+  ##     updateNumericInput(session, "bgBuf", value = state$bgBuf)
+  # #    updateNumericInput(session, "bgPtsNum", value = state$bgPtsNum)
   #   }
   ))
-  common$update_component(tab = "Map")
-
 }
 
 # FROM TEMPLATE

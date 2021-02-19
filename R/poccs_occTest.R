@@ -34,7 +34,7 @@ wallaceOccTest<- function(sp.name, sp.table ,r.env, shinyLogs = NULL){
     # ot=occurrenceTests(sp.name=sp.name,
     #                  sp.table = sp.table,
     #                  r.env = r.env)
-    ot=print('Cory is awesome')
+    ot=cbind(sp.table,test=1)
   })
   shinyLogs %>% writeLog("occurrence testing complete")
   return(ot)

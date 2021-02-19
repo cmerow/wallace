@@ -338,6 +338,8 @@ function(input, output, session) {
   ### COMPONENT: PROCESS OCCURRENCE DATA ####
   ########################################### #
 
+  filterRule = reactive(input$filterRule)
+
   # # # # # # # # # # # # # # # # # # # #
   # module Profile Occurrences ####
   # # # # # # # # # # # # # # # # # # # #
@@ -1756,6 +1758,7 @@ function(input, output, session) {
     bgExt = bgExt,
     bgMask = bgMask,
     bgShpXY = bgShpXY,
+    filterRule = filterRule,
     selCatEnvs = selCatEnvs,
     selTempRaster = selTempRaster,
     selTempMask = selTempMask,
